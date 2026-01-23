@@ -1,0 +1,105 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 240 10% 3.9%;
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+    --accent: 240 4.8% 95.9%;
+    --accent-foreground: 240 5.9% 10%;
+    --border: 240 5.9% 90%;
+  }
+
+  .dark {
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+    --accent: 240 3.7% 15.9%;
+    --accent-foreground: 0 0% 98%;
+    --border: 240 3.7% 15.9%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Code block styling */
+pre {
+  @apply bg-muted rounded-lg p-4 overflow-x-auto;
+}
+
+code {
+  @apply font-mono text-sm;
+}
+
+pre code {
+  @apply bg-transparent p-0;
+}
+
+:not(pre) > code {
+  @apply bg-muted px-1.5 py-0.5 rounded;
+}
+
+/* Prose styling for documentation */
+.prose {
+  @apply max-w-none;
+}
+
+.prose h1 {
+  @apply text-3xl font-bold mt-8 mb-4;
+}
+
+.prose h2 {
+  @apply text-2xl font-semibold mt-6 mb-3;
+}
+
+.prose h3 {
+  @apply text-xl font-semibold mt-4 mb-2;
+}
+
+.prose p {
+  @apply my-4 leading-7;
+}
+
+.prose ul {
+  @apply my-4 ml-6 list-disc;
+}
+
+.prose ol {
+  @apply my-4 ml-6 list-decimal;
+}
+
+.prose li {
+  @apply my-1;
+}
+
+.prose a {
+  @apply text-blue-600 dark:text-blue-400 underline underline-offset-4;
+}
+
+.prose blockquote {
+  @apply border-l-4 border-muted-foreground/30 pl-4 italic my-4;
+}
+
+.prose table {
+  @apply w-full border-collapse my-4;
+}
+
+.prose th,
+.prose td {
+  @apply border border-border px-4 py-2 text-left;
+}
+
+.prose th {
+  @apply bg-muted font-semibold;
+}
