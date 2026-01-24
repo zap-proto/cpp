@@ -38,7 +38,7 @@ This dramatically reduces latency in distributed systems.
 
 ## Defining Interfaces
 
-```capnp
+```protobuf
 # calculator.capnp
 @0x85150b117366d14b;
 
@@ -256,7 +256,7 @@ promise = nullptr;  // Request is cancelled
 
 ### Schema
 
-```capnp
+```protobuf
 interface DataStream {
   # Called for each chunk
   write @0 (data :Data) -> stream;
@@ -317,7 +317,7 @@ void runClient(kj::AsyncIoStream& stream) {
 
 Both sides can export capabilities:
 
-```capnp
+```protobuf
 interface ChatServer {
   join @0 (username :Text, client :ChatClient) -> (session :ChatSession);
 }

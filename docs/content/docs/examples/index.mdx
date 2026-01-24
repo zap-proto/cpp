@@ -11,7 +11,7 @@ This page contains practical examples of using ZAP C++ for serialization and RPC
 
 ### Address Book Schema
 
-```capnp
+```protobuf
 # addressbook.capnp
 @0xdbb9ad1f14bf0b36;
 
@@ -120,7 +120,7 @@ void readAddressBook(int fd) {
 
 ### Shape Schema
 
-```capnp
+```protobuf
 # shape.capnp
 @0xa1b2c3d4e5f67890;
 
@@ -206,7 +206,7 @@ void createShapes(capnp::MallocMessageBuilder& message) {
 
 ### Echo Schema
 
-```capnp
+```protobuf
 # echo.capnp
 @0x8e5322c1e9282534;
 
@@ -290,7 +290,7 @@ int main(int argc, char* argv[]) {
 
 ### Calculator Schema
 
-```capnp
+```protobuf
 # calculator.capnp
 @0xf9e5a3d2c1b08765;
 

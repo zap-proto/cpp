@@ -11,7 +11,7 @@ The ZAP schema language defines the structure of your messages. Schemas are comp
 
 Every schema file must start with a unique 64-bit ID:
 
-```capnp
+```protobuf
 # Generate a unique ID
 capnp id
 
@@ -44,7 +44,7 @@ The ID ensures that different schemas with the same type names do not conflict.
 
 Structs are the primary composite type:
 
-```capnp
+```protobuf
 struct Person {
   name @0 :Text;
   birthdate @1 :Date;
@@ -83,7 +83,7 @@ Each field has a number (`@0`, `@1`, etc.) that identifies it in the binary form
 
 Fields can have default values:
 
-```capnp
+```protobuf
 struct Config {
   timeout @0 :UInt32 = 30;
   retries @1 :UInt8 = 3;
@@ -99,7 +99,7 @@ Default values are encoded as XOR with the actual value, so defaults of zero tak
 
 Enumerations define a set of named values:
 
-```capnp
+```protobuf
 enum Color {
   red @0;
   green @1;
@@ -119,7 +119,7 @@ Enum values also have ordinal numbers that cannot be reused.
 
 Lists hold zero or more elements of a single type:
 
-```capnp
+```protobuf
 struct Document {
   title @0 :Text;
   pages @1 :List(Page);
@@ -139,7 +139,7 @@ Unions allow a field to hold one of several types:
 
 ### Anonymous Unions
 
-```capnp
+```protobuf
 struct Shape {
   union {
     circle @0 :Circle;
@@ -165,7 +165,7 @@ struct Triangle {
 
 ### Named Unions
 
-```capnp
+```protobuf
 struct Value {
   name @0 :Text;
 
@@ -182,7 +182,7 @@ struct Value {
 
 Use `Void` for union members that carry no data:
 
-```capnp
+```protobuf
 struct Result {
   union {
     success @0 :Data;
@@ -197,7 +197,7 @@ struct Result {
 
 Groups organize fields without adding pointer indirection:
 
-```capnp
+```protobuf
 struct Person {
   name @0 :Text;
 
@@ -216,7 +216,7 @@ Groups are purely organizational - they are stored inline in the parent struct.
 
 Interfaces define RPC methods:
 
-```capnp
+```protobuf
 interface Calculator {
   add @0 (a :Int32, b :Int32) -> (result :Int32);
   subtract @1 (a :Int32, b :Int32) -> (result :Int32);
@@ -236,7 +236,7 @@ interface Database {
 
 Methods can return interface references (capabilities):
 
-```capnp
+```protobuf
 interface Session {
   login @0 (username :Text, password :Text) -> (user :User);
 }
@@ -257,7 +257,7 @@ struct Profile {
 
 Use `-> stream` for methods that return multiple responses:
 
-```capnp
+```protobuf
 interface DataStream {
   # Called for each chunk
   write @0 (data :Data) -> stream;
@@ -271,7 +271,7 @@ interface DataStream {
 
 Schemas support generic (parameterized) types:
 
-```capnp
+```protobuf
 struct Map(Key, Value) {
   entries @0 :List(Entry);
 
@@ -295,7 +295,7 @@ interface Factory(T) {
 
 Schemas can import types from other files:
 
-```capnp
+```protobuf
 # common.capnp
 @0x85150b117366d14b;
 
@@ -305,7 +305,7 @@ struct Timestamp {
 }
 ```
 
-```capnp
+```protobuf
 # main.capnp
 @0xc8b1a9f4e2d3b6a7;
 
@@ -319,7 +319,7 @@ struct Event {
 
 ### Import Paths
 
-```capnp
+```protobuf
 # Relative import
 using Foo = import "subdir/foo.capnp";
 
@@ -331,7 +331,7 @@ using Bar = import "/bar.capnp";
 
 Annotations attach metadata to schema elements:
 
-```capnp
+```protobuf
 # Define an annotation
 annotation deprecated(field, struct, enum) :Text;
 annotation doc(field, struct, interface, method) :Text;
@@ -369,7 +369,7 @@ Annotations can target:
 
 Define compile-time constants:
 
-```capnp
+```protobuf
 const maxSize :UInt32 = 1048576;
 const defaultHost :Text = "localhost";
 const defaultPorts :List(UInt16) = [80, 443, 8080];
@@ -404,7 +404,7 @@ const defaultConfig :Config = (
 
 ### Deprecation Pattern
 
-```capnp
+```protobuf
 struct Person {
   name @0 :Text;
   email @1 :Text;
