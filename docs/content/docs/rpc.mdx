@@ -58,7 +58,7 @@ interface Calculator {
 Each interface method becomes a virtual function to override:
 
 ```cpp
-#include <capnp/rpc-twoparty.h>
+#include <zap/rpc-twoparty.h>
 #include <kj/async-io.h>
 #include "calculator.zap.h"
 
@@ -111,11 +111,11 @@ public:
 The simplest way to start a server:
 
 ```cpp
-#include <capnp/ez-rpc.h>
+#include <zap/ez-rpc.h>
 
 int main() {
   // Start RPC server
-  capnp::EzRpcServer server(
+  zap::EzRpcServer server(
       kj::heap<CalculatorImpl>(),
       "localhost:5000");
 
@@ -136,7 +136,7 @@ int main() {
 For more control:
 
 ```cpp
-#include <capnp/rpc-twoparty.h>
+#include <zap/rpc-twoparty.h>
 #include <kj/async-io.h>
 
 int main() {
@@ -164,12 +164,12 @@ int main() {
 ### Using EzRpcClient
 
 ```cpp
-#include <capnp/ez-rpc.h>
+#include <zap/ez-rpc.h>
 #include "calculator.zap.h"
 
 int main() {
   // Connect to server
-  capnp::EzRpcClient client("localhost:5000");
+  zap::EzRpcClient client("localhost:5000");
   auto& waitScope = client.getWaitScope();
 
   // Get the calculator capability
@@ -293,12 +293,12 @@ class DataStreamImpl : public DataStream::Server {
 For direct connections without a central server:
 
 ```cpp
-#include <capnp/rpc-twoparty.h>
+#include <zap/rpc-twoparty.h>
 #include <kj/async-io.h>
 
 // Server side
 void runServer(kj::AsyncIoStream& stream) {
-  capnp::TwoPartyServer server(kj::heap<MyServiceImpl>());
+  zap::TwoPartyServer server(kj::heap<MyServiceImpl>());
 
   auto& network = server.accept(stream);
   // Connection is now active
@@ -306,7 +306,7 @@ void runServer(kj::AsyncIoStream& stream) {
 
 // Client side
 void runClient(kj::AsyncIoStream& stream) {
-  capnp::TwoPartyClient client(stream);
+  zap::TwoPartyClient client(stream);
 
   auto cap = client.bootstrap().castAs<MyService>();
   // Use the capability

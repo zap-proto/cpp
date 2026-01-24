@@ -13,7 +13,7 @@ Every schema file must start with a unique 64-bit ID:
 
 ```protobuf
 # Generate a unique ID
-capnp id
+zap id
 
 # Use it in your schema
 @0x85150b117366d14b;
@@ -25,7 +25,7 @@ The ID ensures that different schemas with the same type names do not conflict.
 
 | Type | Description | C++ Type | Size |
 |------|-------------|----------|------|
-| `Void` | No data | `capnp::Void` | 0 bits |
+| `Void` | No data | `zap::Void` | 0 bits |
 | `Bool` | Boolean | `bool` | 1 bit |
 | `Int8` | Signed 8-bit | `int8_t` | 8 bits |
 | `Int16` | Signed 16-bit | `int16_t` | 16 bits |
@@ -37,8 +37,8 @@ The ID ensures that different schemas with the same type names do not conflict.
 | `UInt64` | Unsigned 64-bit | `uint64_t` | 64 bits |
 | `Float32` | 32-bit float | `float` | 32 bits |
 | `Float64` | 64-bit float | `double` | 64 bits |
-| `Text` | UTF-8 string | `capnp::Text` | pointer |
-| `Data` | Byte array | `capnp::Data` | pointer |
+| `Text` | UTF-8 string | `zap::Text` | pointer |
+| `Data` | Byte array | `zap::Data` | pointer |
 
 ## Structs
 

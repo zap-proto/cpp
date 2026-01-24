@@ -41,13 +41,13 @@ struct AddressBook {
 ### Writing Data
 
 ```cpp
-#include <capnp/message.h>
-#include <capnp/serialize-packed.h>
+#include <zap/message.h>
+#include <zap/serialize-packed.h>
 #include <fcntl.h>
 #include "addressbook.zap.h"
 
 void writeAddressBook(int fd) {
-  capnp::MallocMessageBuilder message;
+  zap::MallocMessageBuilder message;
 
   auto addressBook = message.initRoot<AddressBook>();
   auto people = addressBook.initPeople(2);
@@ -75,19 +75,19 @@ void writeAddressBook(int fd) {
   bobPhones[1].setType(Person::PhoneNumber::Type::WORK);
 
   // Write to file
-  capnp::writePackedMessageToFd(fd, message);
+  zap::writePackedMessageToFd(fd, message);
 }
 ```
 
 ### Reading Data
 
 ```cpp
-#include <capnp/serialize-packed.h>
+#include <zap/serialize-packed.h>
 #include <iostream>
 #include "addressbook.zap.h"
 
 void readAddressBook(int fd) {
-  capnp::PackedFdMessageReader message(fd);
+  zap::PackedFdMessageReader message(fd);
 
   auto addressBook = message.getRoot<AddressBook>();
 
@@ -179,7 +179,7 @@ double calculateArea(Shape::Reader shape) {
 }
 
 // Create shapes
-void createShapes(capnp::MallocMessageBuilder& message) {
+void createShapes(zap::MallocMessageBuilder& message) {
   auto drawing = message.initRoot<Drawing>();
   auto shapes = drawing.initShapes(3);
 
@@ -219,8 +219,8 @@ interface Echo {
 
 ```cpp
 // echo_server.cpp
-#include <capnp/ez-rpc.h>
-#include <capnp/message.h>
+#include <zap/ez-rpc.h>
+#include <zap/message.h>
 #include <kj/debug.h>
 #include <iostream>
 #include "echo.zap.h"
@@ -243,7 +243,7 @@ int main(int argc, char* argv[]) {
   }
 
   // Start server
-  capnp::EzRpcServer server(kj::heap<EchoImpl>(), argv[1]);
+  zap::EzRpcServer server(kj::heap<EchoImpl>(), argv[1]);
   auto& waitScope = server.getWaitScope();
 
   std::cout << "Listening on " << argv[1] << "...\n";
@@ -257,7 +257,7 @@ int main(int argc, char* argv[]) {
 
 ```cpp
 // echo_client.cpp
-#include <capnp/ez-rpc.h>
+#include <zap/ez-rpc.h>
 #include <iostream>
 #include "echo.zap.h"
 
@@ -268,7 +268,7 @@ int main(int argc, char* argv[]) {
   }
 
   // Connect to server
-  capnp::EzRpcClient client(argv[1]);
+  zap::EzRpcClient client(argv[1]);
   auto& waitScope = client.getWaitScope();
 
   // Get the Echo capability
@@ -325,12 +325,12 @@ struct Expression {
 
 ```cpp
 // calculator_client.cpp
-#include <capnp/ez-rpc.h>
+#include <zap/ez-rpc.h>
 #include <iostream>
 #include "calculator.zap.h"
 
 int main() {
-  capnp::EzRpcClient client("localhost:5000");
+  zap::EzRpcClient client("localhost:5000");
   auto& waitScope = client.getWaitScope();
 
   Calculator::Client calc = client.getMain<Calculator>();
@@ -361,7 +361,7 @@ int main() {
 ## Memory-Mapped Files
 
 ```cpp
-#include <capnp/serialize.h>
+#include <zap/serialize.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -389,10 +389,10 @@ public:
     }
 
     // Create reader directly from mapped memory
-    words_ = kj::ArrayPtr<const capnp::word>(
-        reinterpret_cast<const capnp::word*>(data_),
-        size_ / sizeof(capnp::word));
-    reader_ = kj::heap<capnp::FlatArrayMessageReader>(words_);
+    words_ = kj::ArrayPtr<const zap::word>(
+        reinterpret_cast<const zap::word*>(data_),
+        size_ / sizeof(zap::word));
+    reader_ = kj::heap<zap::FlatArrayMessageReader>(words_);
   }
 
   ~MappedMessage() {
@@ -410,8 +410,8 @@ private:
   int fd_ = -1;
   void* data_ = MAP_FAILED;
   size_t size_ = 0;
-  kj::ArrayPtr<const capnp::word> words_;
-  kj::Own<capnp::FlatArrayMessageReader> reader_;
+  kj::ArrayPtr<const zap::word> words_;
+  kj::Own<zap::FlatArrayMessageReader> reader_;
 };
 
 // Usage
@@ -425,18 +425,18 @@ void useMappedFile() {
 ## JSON Conversion
 
 ```cpp
-#include <capnp/compat/json.h>
-#include <capnp/message.h>
+#include <zap/compat/json.h>
+#include <zap/message.h>
 #include <iostream>
 
 void convertToJson(Person::Reader person) {
-  capnp::JsonCodec codec;
+  zap::JsonCodec codec;
   kj::String json = codec.encode(person);
   std::cout << json.cStr() << std::endl;
 }
 
-void parseFromJson(kj::StringPtr json, capnp::MallocMessageBuilder& message) {
-  capnp::JsonCodec codec;
+void parseFromJson(kj::StringPtr json, zap::MallocMessageBuilder& message) {
+  zap::JsonCodec codec;
   auto person = message.initRoot<Person>();
   codec.decode(json, person);
 }
@@ -451,10 +451,10 @@ project(examples CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(CapnProto REQUIRED)
+find_package(Zap REQUIRED)
 
 # Generate C++ from schemas
-capnp_generate_cpp(CAPNP_SRCS CAPNP_HDRS
+zap_generate_cpp(ZAP_SRCS ZAP_HDRS
   addressbook.zap
   shape.zap
   echo.zap
@@ -464,28 +464,28 @@ capnp_generate_cpp(CAPNP_SRCS CAPNP_HDRS
 # Address book example
 add_executable(addressbook
   addressbook_main.cpp
-  ${CAPNP_SRCS}
+  ${ZAP_SRCS}
 )
 target_include_directories(addressbook PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
-target_link_libraries(addressbook PRIVATE CapnProto::capnp)
+target_link_libraries(addressbook PRIVATE Zap::zap)
 
 # Echo server and client
-add_executable(echo_server echo_server.cpp ${CAPNP_SRCS})
+add_executable(echo_server echo_server.cpp ${ZAP_SRCS})
 target_include_directories(echo_server PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_link_libraries(echo_server PRIVATE
-  CapnProto::capnp
-  CapnProto::capnp-rpc
-  CapnProto::kj
-  CapnProto::kj-async
+  Zap::zap
+  Zap::zap-rpc
+  Zap::kj
+  Zap::kj-async
 )
 
-add_executable(echo_client echo_client.cpp ${CAPNP_SRCS})
+add_executable(echo_client echo_client.cpp ${ZAP_SRCS})
 target_include_directories(echo_client PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_link_libraries(echo_client PRIVATE
-  CapnProto::capnp
-  CapnProto::capnp-rpc
-  CapnProto::kj
-  CapnProto::kj-async
+  Zap::zap
+  Zap::zap-rpc
+  Zap::kj
+  Zap::kj-async
 )
 ```
 

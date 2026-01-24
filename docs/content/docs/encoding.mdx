@@ -59,11 +59,11 @@ All data is 8-byte (64-bit) aligned. This ensures efficient access on all modern
 The primary class for building messages:
 
 ```cpp
-#include <capnp/message.h>
+#include <zap/message.h>
 #include "person.zap.h"
 
 // Create a message builder
-capnp::MallocMessageBuilder message;
+zap::MallocMessageBuilder message;
 
 // Get the root object
 auto person = message.initRoot<Person>();
@@ -127,12 +127,12 @@ for (size_t i = 0; i < names.size(); i++) {
 ### Reader Interface
 
 ```cpp
-#include <capnp/message.h>
-#include <capnp/serialize.h>
+#include <zap/message.h>
+#include <zap/serialize.h>
 #include "person.zap.h"
 
 // Read from file descriptor
-capnp::StreamFdMessageReader message(fd);
+zap::StreamFdMessageReader message(fd);
 auto person = message.getRoot<Person>();
 
 // Access fields
@@ -162,21 +162,21 @@ for (auto phone : person.getPhones()) {
 Best for local IPC and memory-mapped files:
 
 ```cpp
-#include <capnp/serialize.h>
+#include <zap/serialize.h>
 
 // Write to file descriptor
-capnp::writeMessageToFd(fd, message);
+zap::writeMessageToFd(fd, message);
 
 // Write to output stream
 kj::FdOutputStream output(fd);
-capnp::writeMessage(output, message);
+zap::writeMessage(output, message);
 
 // Read from file descriptor
-capnp::StreamFdMessageReader reader(fd);
+zap::StreamFdMessageReader reader(fd);
 
 // Read from input stream
 kj::FdInputStream input(fd);
-capnp::InputStreamMessageReader reader(input);
+zap::InputStreamMessageReader reader(input);
 ```
 
 ### Packed Format
@@ -184,17 +184,17 @@ capnp::InputStreamMessageReader reader(input);
 Compresses zero bytes for smaller messages - best for network transfer:
 
 ```cpp
-#include <capnp/serialize-packed.h>
+#include <zap/serialize-packed.h>
 
 // Write packed
-capnp::writePackedMessageToFd(fd, message);
+zap::writePackedMessageToFd(fd, message);
 
 // Write packed to stream
 kj::FdOutputStream output(fd);
-capnp::writePackedMessage(output, message);
+zap::writePackedMessage(output, message);
 
 // Read packed
-capnp::PackedFdMessageReader reader(fd);
+zap::PackedFdMessageReader reader(fd);
 ```
 
 ### Format Comparison
@@ -209,16 +209,16 @@ capnp::PackedFdMessageReader reader(fd);
 For in-memory handling:
 
 ```cpp
-#include <capnp/serialize.h>
+#include <zap/serialize.h>
 
 // Get as flat array
-kj::Array<capnp::word> words = capnp::messageToFlatArray(message);
+kj::Array<zap::word> words = zap::messageToFlatArray(message);
 
 // Read from flat array
-capnp::FlatArrayMessageReader reader(words);
+zap::FlatArrayMessageReader reader(words);
 
 // From unaligned data
-capnp::UnalignedFlatArrayMessageReader reader(
+zap::UnalignedFlatArrayMessageReader reader(
     kj::arrayPtr(data, size));
 ```
 
@@ -228,7 +228,7 @@ For maximum performance with files, use memory mapping:
 
 ```cpp
 #include <sys/mman.h>
-#include <capnp/serialize.h>
+#include <zap/serialize.h>
 
 // Map file into memory
 int fd = open("data.zap", O_RDONLY);
@@ -237,10 +237,10 @@ fstat(fd, &st);
 void* data = mmap(nullptr, st.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
 
 // Read directly from mapped memory
-kj::ArrayPtr<const capnp::word> words(
-    reinterpret_cast<const capnp::word*>(data),
-    st.st_size / sizeof(capnp::word));
-capnp::FlatArrayMessageReader reader(words);
+kj::ArrayPtr<const zap::word> words(
+    reinterpret_cast<const zap::word*>(data),
+    st.st_size / sizeof(zap::word));
+zap::FlatArrayMessageReader reader(words);
 
 auto root = reader.getRoot<MyStruct>();
 // Data is accessed directly from the mmap - no copying!
@@ -254,12 +254,12 @@ auto root = reader.getRoot<MyStruct>();
 kj::FdOutputStream output(fd);
 
 for (auto& item : items) {
-  capnp::MallocMessageBuilder message;
+  zap::MallocMessageBuilder message;
   auto root = message.initRoot<Item>();
   root.setName(item.name);
   root.setValue(item.value);
 
-  capnp::writeMessage(output, message);
+  zap::writeMessage(output, message);
 }
 ```
 
@@ -269,7 +269,7 @@ for (auto& item : items) {
 kj::FdInputStream input(fd);
 
 while (true) {
-  KJ_IF_MAYBE(reader, capnp::tryReadMessage(input)) {
+  KJ_IF_MAYBE(reader, zap::tryReadMessage(input)) {
     auto root = reader->getRoot<Item>();
     process(root);
   } else {
@@ -347,7 +347,7 @@ auto orphan = parent.disownChild();
 Protect against malicious messages that could cause excessive memory use:
 
 ```cpp
-capnp::ReaderOptions options;
+zap::ReaderOptions options;
 
 // Limit total words traversed (default: 8 * 1024 * 1024)
 options.traversalLimitInWords = 64 * 1024 * 1024;
@@ -355,7 +355,7 @@ options.traversalLimitInWords = 64 * 1024 * 1024;
 // Limit nesting depth (default: 64)
 options.nestingLimit = 128;
 
-capnp::StreamFdMessageReader reader(fd, options);
+zap::StreamFdMessageReader reader(fd, options);
 ```
 
 ### Handling Untrusted Input
@@ -363,7 +363,7 @@ capnp::StreamFdMessageReader reader(fd, options);
 ```cpp
 // Always use try/catch for untrusted input
 try {
-  capnp::StreamFdMessageReader reader(fd, options);
+  zap::StreamFdMessageReader reader(fd, options);
   auto root = reader.getRoot<Message>();
 
   // Validate before use
@@ -383,11 +383,11 @@ try {
 For debugging and configuration, use the text format:
 
 ```cpp
-#include <capnp/pretty-print.h>
-#include <capnp/serialize-text.h>
+#include <zap/pretty-print.h>
+#include <zap/serialize-text.h>
 
 // Print as text
-auto text = capnp::prettyPrint(root).flatten();
+auto text = zap::prettyPrint(root).flatten();
 std::cout << text.cStr() << std::endl;
 
 // Output:

@@ -100,7 +100,7 @@ cmake --install .
 |--------|---------|-------------|
 | `BUILD_TESTING` | ON | Build test suite |
 | `BUILD_SHARED_LIBS` | OFF | Build shared libraries |
-| `CAPNP_LITE` | OFF | Build lite version (no RPC, reflection) |
+| `ZAP_LITE` | OFF | Build lite version (no RPC, reflection) |
 | `WITH_OPENSSL` | ON | Enable TLS support via OpenSSL |
 | `WITH_ZLIB` | ON | Enable compression support |
 
@@ -110,7 +110,7 @@ cmake --install .
 cmake .. \
   -DCMAKE_BUILD_TYPE=Release \
   -DBUILD_TESTING=OFF \
-  -DCAPNP_LITE=ON
+  -DZAP_LITE=ON
 ```
 
 ## Docker
@@ -126,7 +126,7 @@ docker run -it -v $(pwd):/workspace ghcr.io/zap-protocol/zap-cpp:latest
 
 # Inside container
 cd /workspace
-capnp compile -oc++ schema.zap
+zap compile -oc++ schema.zap
 ```
 
 ## Verifying Installation
@@ -135,14 +135,14 @@ After installation, verify that the tools are available:
 
 ```bash
 # Check compiler version
-capnp --version
+zap --version
 
 # Generate a unique ID for testing
-capnp id
+zap id
 
 # Compile a test schema
 echo "@0x85150b117366d14b; struct Test { value @0 :Int32; }" > test.zap
-capnp compile -oc++ test.zap
+zap compile -oc++ test.zap
 
 # Verify generated files
 ls test.zap.h test.zap.c++
@@ -160,30 +160,30 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Find ZAP C++ (ZAP)
-find_package(CapnProto REQUIRED)
+find_package(Zap REQUIRED)
 
 add_executable(myapp src/main.cpp)
-target_link_libraries(myapp PRIVATE CapnProto::capnp)
+target_link_libraries(myapp PRIVATE Zap::zap)
 ```
 
 ### Compiling Schema Files
 
 ```cmake
-find_package(CapnProto REQUIRED)
+find_package(Zap REQUIRED)
 
 # Generate C++ from schema
-capnp_generate_cpp(CAPNP_SRCS CAPNP_HDRS
+zap_generate_cpp(ZAP_SRCS ZAP_HDRS
   schemas/message.zap
   schemas/protocol.zap
 )
 
 add_executable(myapp
   src/main.cpp
-  ${CAPNP_SRCS}
+  ${ZAP_SRCS}
 )
 
 target_include_directories(myapp PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
-target_link_libraries(myapp PRIVATE CapnProto::capnp)
+target_link_libraries(myapp PRIVATE Zap::zap)
 ```
 
 ### FetchContent Integration
@@ -194,20 +194,20 @@ Include ZAP C++ directly in your project:
 include(FetchContent)
 
 FetchContent_Declare(
-  capnproto
+  zap
   GIT_REPOSITORY https://github.com/zap-protocol/zap-cpp.git
   GIT_TAG        v1.0.0
 )
 
-FetchContent_MakeAvailable(capnproto)
+FetchContent_MakeAvailable(zap)
 
 add_executable(myapp src/main.cpp)
-target_link_libraries(myapp PRIVATE CapnProto::capnp)
+target_link_libraries(myapp PRIVATE Zap::zap)
 ```
 
 ## Troubleshooting
 
-### CMake cannot find capnp
+### CMake cannot find zap
 
 If CMake cannot find the installed library:
 

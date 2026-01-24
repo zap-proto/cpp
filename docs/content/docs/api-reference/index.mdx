@@ -10,12 +10,12 @@ This reference covers the core ZAP C++ (ZAP) API for building and reading messag
 ## Core Headers
 
 ```cpp
-#include <capnp/message.h>          // MessageBuilder, MessageReader
-#include <capnp/serialize.h>         // writeMessageToFd, readMessageFromFd
-#include <capnp/serialize-packed.h>  // Packed serialization
-#include <capnp/pretty-print.h>      // Text output for debugging
-#include <capnp/dynamic.h>           // Dynamic (reflection) API
-#include <capnp/schema-loader.h>     // Runtime schema loading
+#include <zap/message.h>          // MessageBuilder, MessageReader
+#include <zap/serialize.h>         // writeMessageToFd, readMessageFromFd
+#include <zap/serialize-packed.h>  // Packed serialization
+#include <zap/pretty-print.h>      // Text output for debugging
+#include <zap/dynamic.h>           // Dynamic (reflection) API
+#include <zap/schema-loader.h>     // Runtime schema loading
 ```
 
 ## MessageBuilder Classes
@@ -25,13 +25,13 @@ This reference covers the core ZAP C++ (ZAP) API for building and reading messag
 The primary class for building messages:
 
 ```cpp
-#include <capnp/message.h>
+#include <zap/message.h>
 
 // Default constructor
-capnp::MallocMessageBuilder message;
+zap::MallocMessageBuilder message;
 
 // With suggested first segment size
-capnp::MallocMessageBuilder message(1024);  // words
+zap::MallocMessageBuilder message(1024);  // words
 
 // Initialize root
 auto root = message.initRoot<MyStruct>();
@@ -103,9 +103,9 @@ names.set(1, "Bob");
 Read from a file descriptor:
 
 ```cpp
-#include <capnp/serialize.h>
+#include <zap/serialize.h>
 
-capnp::StreamFdMessageReader message(fd);
+zap::StreamFdMessageReader message(fd);
 auto root = message.getRoot<MyStruct>();
 ```
 
@@ -114,9 +114,9 @@ auto root = message.getRoot<MyStruct>();
 Read packed format from file descriptor:
 
 ```cpp
-#include <capnp/serialize-packed.h>
+#include <zap/serialize-packed.h>
 
-capnp::PackedFdMessageReader message(fd);
+zap::PackedFdMessageReader message(fd);
 auto root = message.getRoot<MyStruct>();
 ```
 
@@ -125,8 +125,8 @@ auto root = message.getRoot<MyStruct>();
 Read from a flat array (zero-copy if aligned):
 
 ```cpp
-kj::ArrayPtr<const capnp::word> words = ...;
-capnp::FlatArrayMessageReader message(words);
+kj::ArrayPtr<const zap::word> words = ...;
+zap::FlatArrayMessageReader message(words);
 auto root = message.getRoot<MyStruct>();
 ```
 
@@ -136,7 +136,7 @@ Read from any input stream:
 
 ```cpp
 kj::InputStream& input = ...;
-capnp::InputStreamMessageReader message(input);
+zap::InputStreamMessageReader message(input);
 auto root = message.getRoot<MyStruct>();
 ```
 
@@ -178,39 +178,39 @@ for (auto phone : person.getPhones()) {
 ### Standard Format
 
 ```cpp
-#include <capnp/serialize.h>
+#include <zap/serialize.h>
 
 // Write
-capnp::writeMessageToFd(fd, message);
-capnp::writeMessage(outputStream, message);
+zap::writeMessageToFd(fd, message);
+zap::writeMessage(outputStream, message);
 
 // Read
-capnp::StreamFdMessageReader reader(fd);
-capnp::InputStreamMessageReader reader(inputStream);
+zap::StreamFdMessageReader reader(fd);
+zap::InputStreamMessageReader reader(inputStream);
 
 // Convert to flat array
-kj::Array<capnp::word> words = capnp::messageToFlatArray(message);
+kj::Array<zap::word> words = zap::messageToFlatArray(message);
 ```
 
 ### Packed Format
 
 ```cpp
-#include <capnp/serialize-packed.h>
+#include <zap/serialize-packed.h>
 
 // Write
-capnp::writePackedMessageToFd(fd, message);
-capnp::writePackedMessage(outputStream, message);
+zap::writePackedMessageToFd(fd, message);
+zap::writePackedMessage(outputStream, message);
 
 // Read
-capnp::PackedFdMessageReader reader(fd);
-capnp::PackedMessageReader reader(inputStream);
+zap::PackedFdMessageReader reader(fd);
+zap::PackedMessageReader reader(inputStream);
 ```
 
 ### Streaming Messages
 
 ```cpp
 // Try to read (returns Maybe)
-KJ_IF_MAYBE(reader, capnp::tryReadMessage(input)) {
+KJ_IF_MAYBE(reader, zap::tryReadMessage(input)) {
   auto root = reader->getRoot<MyStruct>();
   // Process message
 } else {
@@ -223,7 +223,7 @@ KJ_IF_MAYBE(reader, capnp::tryReadMessage(input)) {
 Control reader behavior for security:
 
 ```cpp
-capnp::ReaderOptions options;
+zap::ReaderOptions options;
 
 // Limit total data traversed (default: 64 MiB)
 options.traversalLimitInWords = 64 * 1024 * 1024;
@@ -231,7 +231,7 @@ options.traversalLimitInWords = 64 * 1024 * 1024;
 // Limit pointer nesting depth (default: 64)
 options.nestingLimit = 128;
 
-capnp::StreamFdMessageReader reader(fd, options);
+zap::StreamFdMessageReader reader(fd, options);
 ```
 
 ## Unions
@@ -299,21 +299,21 @@ auto orphan = parent.disownChild();
 Access messages without compile-time schema:
 
 ```cpp
-#include <capnp/dynamic.h>
-#include <capnp/schema-loader.h>
+#include <zap/dynamic.h>
+#include <zap/schema-loader.h>
 
 // Load schema at runtime
-capnp::SchemaLoader loader;
-capnp::Schema schema = loader.loadOnce(schemaData);
-capnp::StructSchema structSchema = schema.asStruct();
+zap::SchemaLoader loader;
+zap::Schema schema = loader.loadOnce(schemaData);
+zap::StructSchema structSchema = schema.asStruct();
 
 // Read dynamically
-capnp::DynamicStruct::Reader reader =
-    message.getRoot<capnp::DynamicStruct>(structSchema);
+zap::DynamicStruct::Reader reader =
+    message.getRoot<zap::DynamicStruct>(structSchema);
 
 // Access fields by name
 auto nameField = structSchema.getFieldByName("name");
-auto name = reader.get(nameField).as<capnp::Text>();
+auto name = reader.get(nameField).as<zap::Text>();
 
 // Or by string directly
 auto value = reader.get("age").as<uint32_t>();
@@ -323,35 +323,35 @@ auto value = reader.get("age").as<uint32_t>();
 
 ```cpp
 switch (value.getType()) {
-  case capnp::DynamicValue::INT:
+  case zap::DynamicValue::INT:
     int64_t i = value.as<int64_t>();
     break;
-  case capnp::DynamicValue::UINT:
+  case zap::DynamicValue::UINT:
     uint64_t u = value.as<uint64_t>();
     break;
-  case capnp::DynamicValue::FLOAT:
+  case zap::DynamicValue::FLOAT:
     double d = value.as<double>();
     break;
-  case capnp::DynamicValue::BOOL:
+  case zap::DynamicValue::BOOL:
     bool b = value.as<bool>();
     break;
-  case capnp::DynamicValue::TEXT:
-    kj::StringPtr s = value.as<capnp::Text>();
+  case zap::DynamicValue::TEXT:
+    kj::StringPtr s = value.as<zap::Text>();
     break;
-  case capnp::DynamicValue::DATA:
-    kj::ArrayPtr<const kj::byte> d = value.as<capnp::Data>();
+  case zap::DynamicValue::DATA:
+    kj::ArrayPtr<const kj::byte> d = value.as<zap::Data>();
     break;
-  case capnp::DynamicValue::STRUCT:
-    capnp::DynamicStruct::Reader r = value.as<capnp::DynamicStruct>();
+  case zap::DynamicValue::STRUCT:
+    zap::DynamicStruct::Reader r = value.as<zap::DynamicStruct>();
     break;
-  case capnp::DynamicValue::LIST:
-    capnp::DynamicList::Reader l = value.as<capnp::DynamicList>();
+  case zap::DynamicValue::LIST:
+    zap::DynamicList::Reader l = value.as<zap::DynamicList>();
     break;
-  case capnp::DynamicValue::ENUM:
-    capnp::DynamicEnum e = value.as<capnp::DynamicEnum>();
+  case zap::DynamicValue::ENUM:
+    zap::DynamicEnum e = value.as<zap::DynamicEnum>();
     break;
-  case capnp::DynamicValue::CAPABILITY:
-    capnp::DynamicCapability::Client c = value.as<capnp::DynamicCapability>();
+  case zap::DynamicValue::CAPABILITY:
+    zap::DynamicCapability::Client c = value.as<zap::DynamicCapability>();
     break;
 }
 ```
@@ -359,14 +359,14 @@ switch (value.getType()) {
 ## Pretty Printing
 
 ```cpp
-#include <capnp/pretty-print.h>
+#include <zap/pretty-print.h>
 
 // Print struct
-kj::String text = capnp::prettyPrint(reader).flatten();
+kj::String text = zap::prettyPrint(reader).flatten();
 std::cout << text.cStr() << std::endl;
 
 // With indentation
-kj::String indented = capnp::prettyPrint(reader)
+kj::String indented = zap::prettyPrint(reader)
     .setFlat(false)
     .flatten();
 ```
@@ -387,16 +387,16 @@ kj::byte buffer[4096];
 kj::ArrayPtr<kj::byte> scratch(buffer, sizeof(buffer));
 
 // Use scratch space for message
-capnp::MallocMessageBuilder message(
-    capnp::SUGGESTED_FIRST_SEGMENT_WORDS,
-    capnp::AllocationStrategy::FIXED_SIZE);
+zap::MallocMessageBuilder message(
+    zap::SUGGESTED_FIRST_SEGMENT_WORDS,
+    zap::AllocationStrategy::FIXED_SIZE);
 ```
 
 ### Copying Messages
 
 ```cpp
 // Deep copy a message
-capnp::MallocMessageBuilder copy;
+zap::MallocMessageBuilder copy;
 copy.setRoot(reader.getRoot<Person>());
 ```
 
@@ -406,7 +406,7 @@ copy.setRoot(reader.getRoot<Person>());
 #include <kj/exception.h>
 
 try {
-  capnp::StreamFdMessageReader reader(fd);
+  zap::StreamFdMessageReader reader(fd);
   auto root = reader.getRoot<Person>();
   // Process...
 } catch (const kj::Exception& e) {
