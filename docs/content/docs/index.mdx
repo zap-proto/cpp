@@ -1,0 +1,74 @@
+---
+title: Introduction
+description: ZAP C++ - High-performance serialization and RPC based on ZAP
+---
+
+# ZAP C++
+
+ZAP C++ is the ZAP Protocol's implementation of ZAP, a data serialization and RPC framework focused on performance and usability.
+
+## Why ZAP C++?
+
+Traditional serialization formats like JSON, XML, or even Protocol Buffers require encoding data into bytes and then decoding it back. This process takes time and allocates memory.
+
+ZAP C++ takes a different approach: data is stored in a format that can be directly used without parsing. When you receive a message, you can immediately access any field without first scanning through the entire message.
+
+## Key Advantages
+
+### Zero-Copy Design
+
+Messages can be memory-mapped directly from disk or network buffers. No copying or parsing required. This makes ZAP C++ ideal for:
+
+- Memory-mapped databases
+- High-frequency trading systems
+- Real-time communication
+- Embedded systems with limited resources
+
+### Schema Evolution
+
+ZAP C++ schemas can evolve over time while maintaining both forward and backward compatibility:
+
+- New fields can be added to any struct
+- Old code can read new messages (ignoring new fields)
+- New code can read old messages (using defaults for missing fields)
+
+### Capability-Based Security
+
+The RPC system implements object-capability security. Instead of checking permissions at every operation, capabilities (references to objects) are passed around. If you have a reference, you have permission to use it.
+
+### Promise Pipelining
+
+When making an RPC call that returns an object, you can immediately make calls on that object without waiting for the first call to complete. The system automatically pipelines these requests, reducing latency.
+
+## Architecture Overview
+
+ZAP C++ consists of several components:
+
+| Component | Description |
+|-----------|-------------|
+| `capnp` | Core serialization library |
+| `capnpc` | Schema compiler |
+| `capnp-rpc` | RPC implementation |
+| `kj` | Utility library (async I/O, strings, etc.) |
+| `kj-async` | Asynchronous I/O and promises |
+| `kj-http` | HTTP client/server |
+| `kj-tls` | TLS support |
+
+## Comparison with Other Formats
+
+| Feature | ZAP C++ | Protocol Buffers | JSON |
+|---------|---------|-----------------|------|
+| Zero-copy | Yes | No | No |
+| Schema required | Yes | Yes | No |
+| Human readable | No* | No | Yes |
+| RPC support | Built-in | gRPC (separate) | No |
+| Promise pipelining | Yes | No | No |
+
+*ZAP C++ includes a text format for debugging and configuration files.
+
+## Next Steps
+
+- Follow the [Installation Guide](/docs/installation)
+- Learn the [Schema Language](/docs/schema)
+- Understand [Serialization](/docs/encoding)
+- Explore the [RPC System](/docs/rpc)

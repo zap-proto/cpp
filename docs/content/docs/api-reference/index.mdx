@@ -1,0 +1,420 @@
+---
+title: API Reference
+description: Complete C++ API reference for ZAP C++ (ZAP)
+---
+
+# API Reference
+
+This reference covers the core ZAP C++ (ZAP) API for building and reading messages.
+
+## Core Headers
+
+```cpp
+#include <capnp/message.h>          // MessageBuilder, MessageReader
+#include <capnp/serialize.h>         // writeMessageToFd, readMessageFromFd
+#include <capnp/serialize-packed.h>  // Packed serialization
+#include <capnp/pretty-print.h>      // Text output for debugging
+#include <capnp/dynamic.h>           // Dynamic (reflection) API
+#include <capnp/schema-loader.h>     // Runtime schema loading
+```
+
+## MessageBuilder Classes
+
+### MallocMessageBuilder
+
+The primary class for building messages:
+
+```cpp
+#include <capnp/message.h>
+
+// Default constructor
+capnp::MallocMessageBuilder message;
+
+// With suggested first segment size
+capnp::MallocMessageBuilder message(1024);  // words
+
+// Initialize root
+auto root = message.initRoot<MyStruct>();
+
+// Get existing root (for modification)
+auto root = message.getRoot<MyStruct>();
+
+// Clear and reuse
+message.clear();
+```
+
+### Builder Interface
+
+Generated builder classes provide these methods:
+
+| Method | Description |
+|--------|-------------|
+| `setField(value)` | Set a scalar field |
+| `initField()` | Initialize a struct field |
+| `initField(size)` | Initialize a list with given size |
+| `getField()` | Get builder for existing struct field |
+| `hasField()` | Check if pointer field is set |
+| `adoptField(orphan)` | Adopt an orphan into this field |
+| `disownField()` | Remove and return field as orphan |
+
+### Setting Fields
+
+```cpp
+// Scalar fields
+person.setId(123);
+person.setName("Alice");
+person.setActive(true);
+person.setScore(95.5);
+
+// Struct fields
+auto address = person.initAddress();
+address.setStreet("123 Main St");
+
+// Or get existing struct
+auto existingAddress = person.getAddress();
+existingAddress.setCity("Springfield");
+```
+
+### List Fields
+
+```cpp
+// Initialize a list with known size
+auto phones = person.initPhones(3);
+phones[0].setNumber("111");
+phones[1].setNumber("222");
+phones[2].setNumber("333");
+
+// Primitive list
+auto scores = result.initScores(5);
+scores.set(0, 100);
+scores.set(1, 95);
+// ...
+
+// Set Text list
+auto names = person.initNames(2);
+names.set(0, "Alice");
+names.set(1, "Bob");
+```
+
+## MessageReader Classes
+
+### StreamFdMessageReader
+
+Read from a file descriptor:
+
+```cpp
+#include <capnp/serialize.h>
+
+capnp::StreamFdMessageReader message(fd);
+auto root = message.getRoot<MyStruct>();
+```
+
+### PackedFdMessageReader
+
+Read packed format from file descriptor:
+
+```cpp
+#include <capnp/serialize-packed.h>
+
+capnp::PackedFdMessageReader message(fd);
+auto root = message.getRoot<MyStruct>();
+```
+
+### FlatArrayMessageReader
+
+Read from a flat array (zero-copy if aligned):
+
+```cpp
+kj::ArrayPtr<const capnp::word> words = ...;
+capnp::FlatArrayMessageReader message(words);
+auto root = message.getRoot<MyStruct>();
+```
+
+### InputStreamMessageReader
+
+Read from any input stream:
+
+```cpp
+kj::InputStream& input = ...;
+capnp::InputStreamMessageReader message(input);
+auto root = message.getRoot<MyStruct>();
+```
+
+### Reader Interface
+
+| Method | Description |
+|--------|-------------|
+| `getField()` | Get field value (returns default if not set) |
+| `hasField()` | Check if pointer field is set |
+| `isField()` | Check which union member is set |
+| `which()` | Get active union member as enum |
+
+### Reading Fields
+
+```cpp
+// Scalar fields
+uint32_t id = person.getId();
+kj::StringPtr name = person.getName();
+bool active = person.getActive();
+double score = person.getScore();
+
+// Struct fields
+auto address = person.getAddress();
+kj::StringPtr city = address.getCity();
+
+// Check if set
+if (person.hasAddress()) {
+  auto addr = person.getAddress();
+}
+
+// List fields
+for (auto phone : person.getPhones()) {
+  kj::StringPtr number = phone.getNumber();
+}
+```
+
+## Serialization Functions
+
+### Standard Format
+
+```cpp
+#include <capnp/serialize.h>
+
+// Write
+capnp::writeMessageToFd(fd, message);
+capnp::writeMessage(outputStream, message);
+
+// Read
+capnp::StreamFdMessageReader reader(fd);
+capnp::InputStreamMessageReader reader(inputStream);
+
+// Convert to flat array
+kj::Array<capnp::word> words = capnp::messageToFlatArray(message);
+```
+
+### Packed Format
+
+```cpp
+#include <capnp/serialize-packed.h>
+
+// Write
+capnp::writePackedMessageToFd(fd, message);
+capnp::writePackedMessage(outputStream, message);
+
+// Read
+capnp::PackedFdMessageReader reader(fd);
+capnp::PackedMessageReader reader(inputStream);
+```
+
+### Streaming Messages
+
+```cpp
+// Try to read (returns Maybe)
+KJ_IF_MAYBE(reader, capnp::tryReadMessage(input)) {
+  auto root = reader->getRoot<MyStruct>();
+  // Process message
+} else {
+  // End of stream
+}
+```
+
+## ReaderOptions
+
+Control reader behavior for security:
+
+```cpp
+capnp::ReaderOptions options;
+
+// Limit total data traversed (default: 64 MiB)
+options.traversalLimitInWords = 64 * 1024 * 1024;
+
+// Limit pointer nesting depth (default: 64)
+options.nestingLimit = 128;
+
+capnp::StreamFdMessageReader reader(fd, options);
+```
+
+## Unions
+
+### Building
+
+```cpp
+auto shape = message.initRoot<Shape>();
+
+// Set one variant (automatically clears others)
+auto circle = shape.initCircle();
+circle.setRadius(5.0);
+
+// Or
+auto rect = shape.initRectangle();
+rect.setWidth(10.0);
+rect.setHeight(20.0);
+```
+
+### Reading
+
+```cpp
+auto shape = reader.getRoot<Shape>();
+
+switch (shape.which()) {
+  case Shape::CIRCLE:
+    handleCircle(shape.getCircle());
+    break;
+  case Shape::RECTANGLE:
+    handleRectangle(shape.getRectangle());
+    break;
+  default:
+    // Unknown variant
+    break;
+}
+
+// Or check specific variant
+if (shape.isCircle()) {
+  auto circle = shape.getCircle();
+}
+```
+
+## Orphans
+
+Create objects outside the message tree:
+
+```cpp
+// Get orphanage from message
+auto& orphanage = message.getOrphanage();
+
+// Create orphan
+auto orphan = orphanage.newOrphan<Person>();
+auto person = orphan.get();
+person.setName("Alice");
+
+// Adopt into message
+parent.adoptChild(kj::mv(orphan));
+
+// Disown from message
+auto orphan = parent.disownChild();
+```
+
+## Dynamic API
+
+Access messages without compile-time schema:
+
+```cpp
+#include <capnp/dynamic.h>
+#include <capnp/schema-loader.h>
+
+// Load schema at runtime
+capnp::SchemaLoader loader;
+capnp::Schema schema = loader.loadOnce(schemaData);
+capnp::StructSchema structSchema = schema.asStruct();
+
+// Read dynamically
+capnp::DynamicStruct::Reader reader =
+    message.getRoot<capnp::DynamicStruct>(structSchema);
+
+// Access fields by name
+auto nameField = structSchema.getFieldByName("name");
+auto name = reader.get(nameField).as<capnp::Text>();
+
+// Or by string directly
+auto value = reader.get("age").as<uint32_t>();
+```
+
+### DynamicValue Types
+
+```cpp
+switch (value.getType()) {
+  case capnp::DynamicValue::INT:
+    int64_t i = value.as<int64_t>();
+    break;
+  case capnp::DynamicValue::UINT:
+    uint64_t u = value.as<uint64_t>();
+    break;
+  case capnp::DynamicValue::FLOAT:
+    double d = value.as<double>();
+    break;
+  case capnp::DynamicValue::BOOL:
+    bool b = value.as<bool>();
+    break;
+  case capnp::DynamicValue::TEXT:
+    kj::StringPtr s = value.as<capnp::Text>();
+    break;
+  case capnp::DynamicValue::DATA:
+    kj::ArrayPtr<const kj::byte> d = value.as<capnp::Data>();
+    break;
+  case capnp::DynamicValue::STRUCT:
+    capnp::DynamicStruct::Reader r = value.as<capnp::DynamicStruct>();
+    break;
+  case capnp::DynamicValue::LIST:
+    capnp::DynamicList::Reader l = value.as<capnp::DynamicList>();
+    break;
+  case capnp::DynamicValue::ENUM:
+    capnp::DynamicEnum e = value.as<capnp::DynamicEnum>();
+    break;
+  case capnp::DynamicValue::CAPABILITY:
+    capnp::DynamicCapability::Client c = value.as<capnp::DynamicCapability>();
+    break;
+}
+```
+
+## Pretty Printing
+
+```cpp
+#include <capnp/pretty-print.h>
+
+// Print struct
+kj::String text = capnp::prettyPrint(reader).flatten();
+std::cout << text.cStr() << std::endl;
+
+// With indentation
+kj::String indented = capnp::prettyPrint(reader)
+    .setFlat(false)
+    .flatten();
+```
+
+## Thread Safety
+
+- **MessageBuilder** - Not thread-safe for concurrent writes
+- **MessageReader** - Safe for concurrent reads from multiple threads
+- Multiple readers can share the same underlying message data
+
+## Memory Management
+
+### Arena Allocation
+
+```cpp
+// Pre-allocate scratch space
+kj::byte buffer[4096];
+kj::ArrayPtr<kj::byte> scratch(buffer, sizeof(buffer));
+
+// Use scratch space for message
+capnp::MallocMessageBuilder message(
+    capnp::SUGGESTED_FIRST_SEGMENT_WORDS,
+    capnp::AllocationStrategy::FIXED_SIZE);
+```
+
+### Copying Messages
+
+```cpp
+// Deep copy a message
+capnp::MallocMessageBuilder copy;
+copy.setRoot(reader.getRoot<Person>());
+```
+
+## Error Handling
+
+```cpp
+#include <kj/exception.h>
+
+try {
+  capnp::StreamFdMessageReader reader(fd);
+  auto root = reader.getRoot<Person>();
+  // Process...
+} catch (const kj::Exception& e) {
+  KJ_LOG(ERROR, "Failed to read message", e.getDescription());
+}
+```
+
+## Next Steps
+
+- See [Serialization Examples](/docs/examples/serialization)
+- Explore [RPC Examples](/docs/examples/rpc)

@@ -1,0 +1,15 @@
+{
+  "title": "Documentation",
+  "pages": [
+    "index",
+    "installation",
+    "schema",
+    "encoding",
+    "rpc",
+    "kj",
+    "---API Reference---",
+    "api-reference",
+    "---Examples---",
+    "examples"
+  ]
+}

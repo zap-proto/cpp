@@ -1,0 +1,253 @@
+---
+title: Installation
+description: How to install ZAP C++ on various platforms
+---
+
+# Installation
+
+This guide covers installing ZAP C++ on various platforms.
+
+## System Requirements
+
+- C++20 compatible compiler (GCC 10+, Clang 12+, MSVC 2019+)
+- CMake 3.16 or later
+- pkg-config (optional, for system integration)
+
+## Package Managers
+
+### macOS (Homebrew)
+
+```bash
+# Install from tap
+brew tap zap-protocol/tap
+brew install zap-cpp
+```
+
+### Ubuntu/Debian (apt)
+
+```bash
+# Add ZAP repository
+curl -fsSL https://pkg.zap-protocol.org/gpg | sudo gpg --dearmor -o /usr/share/keyrings/zap.gpg
+echo "deb [signed-by=/usr/share/keyrings/zap.gpg] https://pkg.zap-protocol.org/apt stable main" | \
+  sudo tee /etc/apt/sources.list.d/zap.list
+
+# Install
+sudo apt update
+sudo apt install zap-cpp-dev
+```
+
+### Arch Linux (AUR)
+
+```bash
+# Install from AUR
+yay -S zap-cpp
+```
+
+### vcpkg
+
+```json
+// vcpkg.json
+{
+  "dependencies": ["zap-cpp"]
+}
+```
+
+Or install directly:
+
+```bash
+vcpkg install zap-cpp
+```
+
+### Conan
+
+```ini
+# conanfile.txt
+[requires]
+zap-cpp/1.0.0
+```
+
+Or install directly:
+
+```bash
+conan install zap-cpp/1.0.0@
+```
+
+## Building from Source
+
+The recommended way to install ZAP C++ from source:
+
+```bash
+# Clone the repository
+git clone https://github.com/zap-protocol/zap-cpp.git
+cd zap-cpp
+
+# Create build directory
+mkdir build && cd build
+
+# Configure with CMake
+cmake .. -DCMAKE_BUILD_TYPE=Release
+
+# Build
+cmake --build . -j$(nproc)
+
+# Install (may require sudo)
+cmake --install .
+```
+
+### CMake Options
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `BUILD_TESTING` | ON | Build test suite |
+| `BUILD_SHARED_LIBS` | OFF | Build shared libraries |
+| `CAPNP_LITE` | OFF | Build lite version (no RPC, reflection) |
+| `WITH_OPENSSL` | ON | Enable TLS support via OpenSSL |
+| `WITH_ZLIB` | ON | Enable compression support |
+
+#### Example: Minimal Build
+
+```bash
+cmake .. \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DBUILD_TESTING=OFF \
+  -DCAPNP_LITE=ON
+```
+
+## Docker
+
+A Docker image with ZAP C++ pre-installed is available:
+
+```bash
+# Pull the image
+docker pull ghcr.io/zap-protocol/zap-cpp:latest
+
+# Run with your project mounted
+docker run -it -v $(pwd):/workspace ghcr.io/zap-protocol/zap-cpp:latest
+
+# Inside container
+cd /workspace
+capnp compile -oc++ schema.capnp
+```
+
+## Verifying Installation
+
+After installation, verify that the tools are available:
+
+```bash
+# Check compiler version
+capnp --version
+
+# Generate a unique ID for testing
+capnp id
+
+# Compile a test schema
+echo "@0x85150b117366d14b; struct Test { value @0 :Int32; }" > test.capnp
+capnp compile -oc++ test.capnp
+
+# Verify generated files
+ls test.capnp.h test.capnp.c++
+```
+
+## CMake Integration
+
+### Finding the Package
+
+```cmake
+cmake_minimum_required(VERSION 3.16)
+project(myproject CXX)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# Find ZAP C++ (ZAP)
+find_package(CapnProto REQUIRED)
+
+add_executable(myapp src/main.cpp)
+target_link_libraries(myapp PRIVATE CapnProto::capnp)
+```
+
+### Compiling Schema Files
+
+```cmake
+find_package(CapnProto REQUIRED)
+
+# Generate C++ from schema
+capnp_generate_cpp(CAPNP_SRCS CAPNP_HDRS
+  schemas/message.capnp
+  schemas/protocol.capnp
+)
+
+add_executable(myapp
+  src/main.cpp
+  ${CAPNP_SRCS}
+)
+
+target_include_directories(myapp PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+target_link_libraries(myapp PRIVATE CapnProto::capnp)
+```
+
+### FetchContent Integration
+
+Include ZAP C++ directly in your project:
+
+```cmake
+include(FetchContent)
+
+FetchContent_Declare(
+  capnproto
+  GIT_REPOSITORY https://github.com/zap-protocol/zap-cpp.git
+  GIT_TAG        v1.0.0
+)
+
+FetchContent_MakeAvailable(capnproto)
+
+add_executable(myapp src/main.cpp)
+target_link_libraries(myapp PRIVATE CapnProto::capnp)
+```
+
+## Troubleshooting
+
+### CMake cannot find capnp
+
+If CMake cannot find the installed library:
+
+```bash
+# Set the prefix path
+cmake .. -DCMAKE_PREFIX_PATH=/usr/local
+
+# Or use pkg-config
+export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH
+```
+
+### Linker errors with shared libraries
+
+Update the library path:
+
+```bash
+# Linux
+export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
+sudo ldconfig
+
+# macOS
+export DYLD_LIBRARY_PATH=/usr/local/lib:$DYLD_LIBRARY_PATH
+```
+
+### Compiler version issues
+
+Ensure you have a C++20 compatible compiler:
+
+```bash
+# Check GCC version
+g++ --version  # Should be 10+
+
+# Check Clang version
+clang++ --version  # Should be 12+
+
+# Specify compiler for CMake
+cmake .. -DCMAKE_CXX_COMPILER=g++-12
+```
+
+## Next Steps
+
+- Learn the [Schema Language](/docs/schema)
+- Understand [Serialization](/docs/encoding)

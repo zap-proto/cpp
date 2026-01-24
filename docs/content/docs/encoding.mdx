@@ -1,0 +1,415 @@
+---
+title: Wire Format & Encoding
+description: Understanding ZAP's zero-copy wire format and serialization
+---
+
+# Wire Format & Encoding
+
+ZAP C++ provides zero-copy serialization, meaning data can be read directly from the wire without parsing or copying.
+
+## Zero-Copy Design
+
+The ZAP wire format stores data in a way that maps directly to in-memory structures. When you receive a message:
+
+- No parsing is required
+- No memory allocation for the message itself
+- Fields can be accessed in any order
+- Unused fields are never touched
+
+This makes ZAP ideal for:
+- Memory-mapped databases
+- High-frequency trading
+- Real-time systems
+- Resource-constrained environments
+
+## Message Structure
+
+Messages consist of:
+
+- **Segments** - Contiguous blocks of memory
+- **Pointers** - References between objects
+- **Data** - Primitive values and blob data
+
+### Segment Layout
+
+```
++-------------------------------------+
+| Segment Table (4 + 4*N bytes)       |
+|  - segment count (4 bytes)          |
+|  - segment 0 size (4 bytes)         |
+|  - segment 1 size (4 bytes)         |
+|  ...                                |
++-------------------------------------+
+| Segment 0 data                      |
++-------------------------------------+
+| Segment 1 data                      |
++-------------------------------------+
+| ...                                 |
++-------------------------------------+
+```
+
+### Word Alignment
+
+All data is 8-byte (64-bit) aligned. This ensures efficient access on all modern architectures.
+
+## Building Messages
+
+### MallocMessageBuilder
+
+The primary class for building messages:
+
+```cpp
+#include <capnp/message.h>
+#include "person.capnp.h"
+
+// Create a message builder
+capnp::MallocMessageBuilder message;
+
+// Get the root object
+auto person = message.initRoot<Person>();
+
+// Set scalar fields
+person.setName("Alice");
+person.setAge(30);
+
+// Initialize and set list fields
+auto phones = person.initPhones(2);
+phones[0].setNumber("+1-555-1234");
+phones[1].setNumber("+1-555-5678");
+```
+
+### Builder Methods
+
+| Method | Description |
+|--------|-------------|
+| `setField(value)` | Set a scalar field |
+| `initField()` | Initialize a struct field |
+| `initField(size)` | Initialize a list field with given size |
+| `getField()` | Get a builder for a struct field |
+| `hasField()` | Check if a pointer field is set |
+| `adoptField(orphan)` | Adopt an orphan into this field |
+| `disownField()` | Remove and return field as orphan |
+
+### Text and Data Fields
+
+```cpp
+// Setting text
+person.setName("Alice");
+person.setName(kj::StringPtr("Alice"));
+
+// Setting data
+auto data = person.initBinaryData(1024);
+memcpy(data.begin(), buffer, 1024);
+
+// From existing array
+person.setData(kj::arrayPtr(buffer, size));
+```
+
+### List Fields
+
+```cpp
+// Initialize a list
+auto phones = person.initPhones(3);
+phones[0].setNumber("111");
+phones[1].setNumber("222");
+phones[2].setNumber("333");
+
+// Set from existing data
+kj::ArrayPtr<const kj::StringPtr> names = ...;
+auto list = person.initNames(names.size());
+for (size_t i = 0; i < names.size(); i++) {
+  list.set(i, names[i]);
+}
+```
+
+## Reading Messages
+
+### Reader Interface
+
+```cpp
+#include <capnp/message.h>
+#include <capnp/serialize.h>
+#include "person.capnp.h"
+
+// Read from file descriptor
+capnp::StreamFdMessageReader message(fd);
+auto person = message.getRoot<Person>();
+
+// Access fields
+kj::StringPtr name = person.getName();
+uint32_t age = person.getAge();
+
+// Iterate over lists
+for (auto phone : person.getPhones()) {
+  kj::StringPtr number = phone.getNumber();
+  auto type = phone.getType();
+}
+```
+
+### Reader Methods
+
+| Method | Description |
+|--------|-------------|
+| `getField()` | Get field value (returns default if not set) |
+| `hasField()` | Check if pointer field is set |
+| `isField()` | Check which union member is set |
+| `which()` | Get the active union member |
+
+## Serialization Formats
+
+### Standard Format
+
+Best for local IPC and memory-mapped files:
+
+```cpp
+#include <capnp/serialize.h>
+
+// Write to file descriptor
+capnp::writeMessageToFd(fd, message);
+
+// Write to output stream
+kj::FdOutputStream output(fd);
+capnp::writeMessage(output, message);
+
+// Read from file descriptor
+capnp::StreamFdMessageReader reader(fd);
+
+// Read from input stream
+kj::FdInputStream input(fd);
+capnp::InputStreamMessageReader reader(input);
+```
+
+### Packed Format
+
+Compresses zero bytes for smaller messages - best for network transfer:
+
+```cpp
+#include <capnp/serialize-packed.h>
+
+// Write packed
+capnp::writePackedMessageToFd(fd, message);
+
+// Write packed to stream
+kj::FdOutputStream output(fd);
+capnp::writePackedMessage(output, message);
+
+// Read packed
+capnp::PackedFdMessageReader reader(fd);
+```
+
+### Format Comparison
+
+| Format | Size | Speed | Use Case |
+|--------|------|-------|----------|
+| Standard | Larger | Fastest | Local IPC, memory-mapped files |
+| Packed | Smaller | Fast | Network, storage |
+
+### Flat Arrays
+
+For in-memory handling:
+
+```cpp
+#include <capnp/serialize.h>
+
+// Get as flat array
+kj::Array<capnp::word> words = capnp::messageToFlatArray(message);
+
+// Read from flat array
+capnp::FlatArrayMessageReader reader(words);
+
+// From unaligned data
+capnp::UnalignedFlatArrayMessageReader reader(
+    kj::arrayPtr(data, size));
+```
+
+## Memory Mapping
+
+For maximum performance with files, use memory mapping:
+
+```cpp
+#include <sys/mman.h>
+#include <capnp/serialize.h>
+
+// Map file into memory
+int fd = open("data.capnp", O_RDONLY);
+struct stat st;
+fstat(fd, &st);
+void* data = mmap(nullptr, st.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
+
+// Read directly from mapped memory
+kj::ArrayPtr<const capnp::word> words(
+    reinterpret_cast<const capnp::word*>(data),
+    st.st_size / sizeof(capnp::word));
+capnp::FlatArrayMessageReader reader(words);
+
+auto root = reader.getRoot<MyStruct>();
+// Data is accessed directly from the mmap - no copying!
+```
+
+## Streaming Multiple Messages
+
+### Writing a Stream
+
+```cpp
+kj::FdOutputStream output(fd);
+
+for (auto& item : items) {
+  capnp::MallocMessageBuilder message;
+  auto root = message.initRoot<Item>();
+  root.setName(item.name);
+  root.setValue(item.value);
+
+  capnp::writeMessage(output, message);
+}
+```
+
+### Reading a Stream
+
+```cpp
+kj::FdInputStream input(fd);
+
+while (true) {
+  KJ_IF_MAYBE(reader, capnp::tryReadMessage(input)) {
+    auto root = reader->getRoot<Item>();
+    process(root);
+  } else {
+    break;  // End of stream
+  }
+}
+```
+
+## Unions
+
+### Building Unions
+
+```cpp
+// Schema:
+// struct Shape {
+//   union {
+//     circle @0 :Circle;
+//     rectangle @1 :Rectangle;
+//   }
+// }
+
+auto shape = message.initRoot<Shape>();
+
+// Set circle variant
+auto circle = shape.initCircle();
+circle.setRadius(5.0);
+
+// Or set rectangle variant (replaces circle)
+auto rect = shape.initRectangle();
+rect.setWidth(10.0);
+rect.setHeight(20.0);
+```
+
+### Reading Unions
+
+```cpp
+auto shape = reader.getRoot<Shape>();
+
+switch (shape.which()) {
+  case Shape::CIRCLE: {
+    auto circle = shape.getCircle();
+    double r = circle.getRadius();
+    break;
+  }
+  case Shape::RECTANGLE: {
+    auto rect = shape.getRectangle();
+    double w = rect.getWidth();
+    double h = rect.getHeight();
+    break;
+  }
+}
+```
+
+## Orphans
+
+Orphans are objects not yet attached to a message:
+
+```cpp
+// Create an orphan
+auto orphan = message.getOrphanage().newOrphan<Person>();
+auto person = orphan.get();
+person.setName("Alice");
+
+// Adopt into a field
+parent.adoptChild(kj::mv(orphan));
+
+// Disown from a field
+auto orphan = parent.disownChild();
+```
+
+## Security Considerations
+
+### Traversal Limits
+
+Protect against malicious messages that could cause excessive memory use:
+
+```cpp
+capnp::ReaderOptions options;
+
+// Limit total words traversed (default: 8 * 1024 * 1024)
+options.traversalLimitInWords = 64 * 1024 * 1024;
+
+// Limit nesting depth (default: 64)
+options.nestingLimit = 128;
+
+capnp::StreamFdMessageReader reader(fd, options);
+```
+
+### Handling Untrusted Input
+
+```cpp
+// Always use try/catch for untrusted input
+try {
+  capnp::StreamFdMessageReader reader(fd, options);
+  auto root = reader.getRoot<Message>();
+
+  // Validate before use
+  if (!root.hasRequiredField()) {
+    throw std::runtime_error("Missing required field");
+  }
+
+  process(root);
+} catch (const kj::Exception& e) {
+  // Handle malformed message
+  log("Invalid message: ", e.getDescription());
+}
+```
+
+## Text Format
+
+For debugging and configuration, use the text format:
+
+```cpp
+#include <capnp/pretty-print.h>
+#include <capnp/serialize-text.h>
+
+// Print as text
+auto text = capnp::prettyPrint(root).flatten();
+std::cout << text.cStr() << std::endl;
+
+// Output:
+// ( name = "Alice",
+//   age = 30,
+//   phones = [
+//     ( number = "+1-555-1234", type = mobile ),
+//     ( number = "+1-555-5678", type = work )
+//   ] )
+```
+
+## Performance Tips
+
+1. **Reuse MessageBuilder** - Call `message.clear()` instead of creating new builders
+2. **Use packed format for network** - Reduces bandwidth at minimal CPU cost
+3. **Memory map large files** - Avoids copying data entirely
+4. **Pre-size lists** - Use `initList(size)` to avoid reallocations
+5. **Avoid dynamic API for hot paths** - Compile-time types are faster
+6. **Batch writes** - Multiple small writes are slower than one large write
+
+## Next Steps
+
+- Learn about the [RPC System](/docs/rpc)
+- Explore the [KJ Library](/docs/kj)
+- See [Examples](/docs/examples)

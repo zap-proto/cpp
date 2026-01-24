@@ -1,12 +1,15 @@
+import { createMDX } from 'fumadocs-mdx/next';
+
+const withMDX = createMDX();
+
 /** @type {import('next').NextConfig} */
-const nextConfig = {
-  output: 'export',
+const config = {
   basePath: '/zap-cpp',
-  assetPrefix: '/zap-cpp/',
+  output: 'export',
+  reactStrictMode: true,
   images: {
     unoptimized: true,
   },
-  trailingSlash: true,
-}
+};
 
-export default nextConfig
+export default withMDX(config);

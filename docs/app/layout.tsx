@@ -1,22 +1,21 @@
-import type { Metadata } from 'next'
-import { GeistSans } from 'geist/font/sans'
-import { GeistMono } from 'geist/font/mono'
 import './globals.css'
+import { RootProvider } from 'fumadocs-ui/provider'
+import type { Metadata } from 'next'
+import type { ReactNode } from 'react'
 
 export const metadata: Metadata = {
-  title: 'ZAP C++ Documentation',
-  description: 'Documentation for the ZAP Protocol C++ implementation (Cap\'n Proto fork)',
+  title: {
+    template: '%s | ZAP C++',
+    default: 'ZAP C++ Documentation',
+  },
+  description: 'C++ bindings for ZAP - Zero-Copy App Proto for AI agent communication',
 }
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" className={`${GeistSans.variable} ${GeistMono.variable}`}>
-      <body className="min-h-screen bg-background font-sans antialiased">
-        {children}
+    <html lang="en" suppressHydrationWarning>
+      <body>
+        <RootProvider>{children}</RootProvider>
       </body>
     </html>
   )
