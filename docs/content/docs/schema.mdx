@@ -296,7 +296,7 @@ interface Factory(T) {
 Schemas can import types from other files:
 
 ```protobuf
-# common.capnp
+# common.zap
 @0x85150b117366d14b;
 
 struct Timestamp {
@@ -306,10 +306,10 @@ struct Timestamp {
 ```
 
 ```protobuf
-# main.capnp
+# main.zap
 @0xc8b1a9f4e2d3b6a7;
 
-using Common = import "common.capnp";
+using Common = import "common.zap";
 
 struct Event {
   name @0 :Text;
@@ -321,10 +321,10 @@ struct Event {
 
 ```protobuf
 # Relative import
-using Foo = import "subdir/foo.capnp";
+using Foo = import "subdir/foo.zap";
 
 # Absolute import (from include path)
-using Bar = import "/bar.capnp";
+using Bar = import "/bar.zap";
 ```
 
 ## Annotations

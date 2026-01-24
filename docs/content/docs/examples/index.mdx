@@ -12,7 +12,7 @@ This page contains practical examples of using ZAP C++ for serialization and RPC
 ### Address Book Schema
 
 ```protobuf
-# addressbook.capnp
+# addressbook.zap
 @0xdbb9ad1f14bf0b36;
 
 struct Person {
@@ -44,7 +44,7 @@ struct AddressBook {
 #include <capnp/message.h>
 #include <capnp/serialize-packed.h>
 #include <fcntl.h>
-#include "addressbook.capnp.h"
+#include "addressbook.zap.h"
 
 void writeAddressBook(int fd) {
   capnp::MallocMessageBuilder message;
@@ -84,7 +84,7 @@ void writeAddressBook(int fd) {
 ```cpp
 #include <capnp/serialize-packed.h>
 #include <iostream>
-#include "addressbook.capnp.h"
+#include "addressbook.zap.h"
 
 void readAddressBook(int fd) {
   capnp::PackedFdMessageReader message(fd);
@@ -121,7 +121,7 @@ void readAddressBook(int fd) {
 ### Shape Schema
 
 ```protobuf
-# shape.capnp
+# shape.zap
 @0xa1b2c3d4e5f67890;
 
 struct Shape {
@@ -156,7 +156,7 @@ struct Drawing {
 ### Creating and Reading Shapes
 
 ```cpp
-#include "shape.capnp.h"
+#include "shape.zap.h"
 #include <cmath>
 
 // Calculate area based on shape type
@@ -207,7 +207,7 @@ void createShapes(capnp::MallocMessageBuilder& message) {
 ### Echo Schema
 
 ```protobuf
-# echo.capnp
+# echo.zap
 @0x8e5322c1e9282534;
 
 interface Echo {
@@ -223,7 +223,7 @@ interface Echo {
 #include <capnp/message.h>
 #include <kj/debug.h>
 #include <iostream>
-#include "echo.capnp.h"
+#include "echo.zap.h"
 
 class EchoImpl final : public Echo::Server {
 public:
@@ -259,7 +259,7 @@ int main(int argc, char* argv[]) {
 // echo_client.cpp
 #include <capnp/ez-rpc.h>
 #include <iostream>
-#include "echo.capnp.h"
+#include "echo.zap.h"
 
 int main(int argc, char* argv[]) {
   if (argc != 3) {
@@ -291,7 +291,7 @@ int main(int argc, char* argv[]) {
 ### Calculator Schema
 
 ```protobuf
-# calculator.capnp
+# calculator.zap
 @0xf9e5a3d2c1b08765;
 
 interface Calculator {
@@ -327,7 +327,7 @@ struct Expression {
 // calculator_client.cpp
 #include <capnp/ez-rpc.h>
 #include <iostream>
-#include "calculator.capnp.h"
+#include "calculator.zap.h"
 
 int main() {
   capnp::EzRpcClient client("localhost:5000");
@@ -416,7 +416,7 @@ private:
 
 // Usage
 void useMappedFile() {
-  MappedMessage msg("large-data.capnp");
+  MappedMessage msg("large-data.zap");
   auto data = msg.getRoot<LargeDataSet>();
   // Access data directly from disk without copying
 }
@@ -455,10 +455,10 @@ find_package(CapnProto REQUIRED)
 
 # Generate C++ from schemas
 capnp_generate_cpp(CAPNP_SRCS CAPNP_HDRS
-  addressbook.capnp
-  shape.capnp
-  echo.capnp
-  calculator.capnp
+  addressbook.zap
+  shape.zap
+  echo.zap
+  calculator.zap
 )
 
 # Address book example

@@ -39,7 +39,7 @@ This dramatically reduces latency in distributed systems.
 ## Defining Interfaces
 
 ```protobuf
-# calculator.capnp
+# calculator.zap
 @0x85150b117366d14b;
 
 interface Calculator {
@@ -60,7 +60,7 @@ Each interface method becomes a virtual function to override:
 ```cpp
 #include <capnp/rpc-twoparty.h>
 #include <kj/async-io.h>
-#include "calculator.capnp.h"
+#include "calculator.zap.h"
 
 class CalculatorImpl final : public Calculator::Server {
 public:
@@ -165,7 +165,7 @@ int main() {
 
 ```cpp
 #include <capnp/ez-rpc.h>
-#include "calculator.capnp.h"
+#include "calculator.zap.h"
 
 int main() {
   // Connect to server
