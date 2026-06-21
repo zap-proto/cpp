@@ -3,7 +3,7 @@
 > **Docs:** [ZAP C++ SDK](https://zap-proto.dev/docs/sdks/cpp) · part of the [ZAP Protocol](https://zap-proto.io)
 
 
-ZAP Protocol's fork of [Cap'n Proto](https://capnproto.org/) - an insanely fast data interchange format and capability-based RPC system.
+ZAP is an insanely fast data interchange format and capability-based RPC system.
 
 ## Features
 

@@ -5,7 +5,7 @@ export default function HomePage() {
     <main className="flex min-h-screen flex-col items-center justify-center p-8 text-center">
       <h1 className="mb-4 text-4xl font-bold">ZAP C++</h1>
       <p className="mb-8 max-w-2xl text-lg text-fd-muted-foreground">
-        High-performance serialization and RPC framework based on Cap&apos;n Proto.
+        High-performance serialization and RPC framework.
         Zero-copy design, schema evolution, and capability-based security.
       </p>
       <div className="flex gap-4">
