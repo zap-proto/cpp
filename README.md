@@ -90,6 +90,12 @@ Requires a C++23 compiler (`std::expected`, `std::span`) and POSIX sockets.
 this runtime writes them exactly — a round-trip test proves an implementation
 agrees with itself, and self-agreement is what a fork also has.
 
+`test/wire_test.cpp` is the canonical runtime's own `zap_test.go`, case for
+case, including the hostile-buffer rules: every pointer floored at the header,
+a byte tail's offset unsigned so a sign-extended bit pattern dies on the end
+bound rather than aliasing backwards, and a list length that cannot outrun the
+buffer it names.
+
 `test/transport_test.cpp` proves the two protocol properties without leaning on
 a timer. The bidirectional case parks each peer's handler until the other's
 request has arrived, so it can only pass if the one connection carries both
