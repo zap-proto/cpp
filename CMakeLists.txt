@@ -9,7 +9,7 @@
 # FetchContent against a tag — never by including a path into this tree.
 
 cmake_minimum_required(VERSION 3.20)
-project(Zap VERSION 0.1.0 LANGUAGES CXX)
+project(Zap VERSION 0.1.1 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -40,13 +40,14 @@ target_link_libraries(zap PUBLIC Threads::Threads)
 target_compile_options(zap PRIVATE -Wall -Wextra)
 
 # ── tests ───────────────────────────────────────────────────────────────────
-#   codec       the message layer: header, pointers, bounds, builder bytes
+#   codec       the message layer, against bytes the canonical runtime printed
+#   wire        the canonical runtime's own zap_test.go, case for case
 #   rpc         the call envelope and the promise table
 #   transport   the protocol: both peers initiate, many calls in flight,
 #               answers out of order
 if(ZAP_BUILD_TESTS)
   enable_testing()
-  foreach(_t codec rpc transport)
+  foreach(_t codec wire rpc transport)
     add_executable(zap_${_t}_test test/${_t}_test.cpp)
     target_link_libraries(zap_${_t}_test PRIVATE zap)
     target_compile_options(zap_${_t}_test PRIVATE -Wall -Wextra)

@@ -30,7 +30,7 @@ or, against a tag rather than an install:
 include(FetchContent)
 FetchContent_Declare(Zap
   GIT_REPOSITORY https://github.com/zap-proto/cpp.git
-  GIT_TAG        v0.1.0)
+  GIT_TAG        v0.1.1)
 FetchContent_MakeAvailable(Zap)
 ```
 
