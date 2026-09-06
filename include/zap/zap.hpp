@@ -170,6 +170,33 @@ class List {
     // does. It is how a list of variably-sized objects is expressed.
     Object object_ptr(std::int64_t i) const;
 
+    // bytes_at(i) is element i of a LENGTH-PREFIXED list: entries laid down
+    // as a 4-byte little-endian length followed by that many bytes, which is
+    // the only shape an element with no width of its own can have. Locating
+    // element i walks the entries from the start, so decoding a whole list by
+    // index costs O(n²) — the shape's price, and the reason a record list
+    // carries a stride instead.
+    //
+    // An entry that would run off the buffer, and an index past the count,
+    // answer an empty span, exactly where an out-of-range read answers zero.
+    std::span<const std::uint8_t> bytes_at(std::int64_t i) const {
+        if (i < 0 || i >= len_ || d_ == nullptr) return {};
+        std::int64_t p = off_;
+        for (std::int64_t k = 0; k < i; ++k) {
+            if (static_cast<std::uint64_t>(p) + 4 > n_) return {};
+            p += 4 + static_cast<std::int64_t>(load_u32(d_ + p));
+        }
+        if (static_cast<std::uint64_t>(p) + 4 > n_) return {};
+        const std::int64_t sz = static_cast<std::int64_t>(load_u32(d_ + p));
+        const std::int64_t start = p + 4;
+        if (static_cast<std::uint64_t>(start + sz) > n_) return {};
+        return {d_ + start, static_cast<std::size_t>(sz)};
+    }
+
+    // object_at(i) is element i of a length-prefixed list read as a message
+    // of its own — which is what such an entry is.
+    Object object_at(std::int64_t i) const;
+
     std::span<const std::uint8_t> bytes() const {
         if (d_ == nullptr || static_cast<std::uint64_t>(off_ + len_) > n_) return {};
         return {d_ + off_, static_cast<std::size_t>(len_)};
@@ -355,6 +382,13 @@ class Message {
     const std::uint8_t* d_ = nullptr;
     std::size_t n_ = 0;
 };
+
+inline Object List::object_at(std::int64_t i) const {
+    const auto b = bytes_at(i);
+    const auto m = Message::parse(b);
+    if (!m) return {};
+    return m->root();
+}
 
 class ObjectBuilder;
 class ListBuilder;

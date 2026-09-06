@@ -195,6 +195,41 @@ void embedrefuseswhatisnotamessage() {
     CHECK_NUM(0, b.embed(sp(headeronly)));
 }
 
+// Go: TestObjectAt / TestBytesAt — the length-prefixed shape, which is what a
+// list holds when its element has no width of its own. Locating an entry
+// walks the ones before it; an index past the count answers nothing.
+void lengthprefixedelements() {
+    Builder inner(64);
+    auto io = inner.start_object(4);
+    io.set_u32(0, 4242);
+    io.finish_as_root();
+    const auto sub = inner.finish();
+
+    Builder b(256);
+    auto lb = b.start_list(0);
+    for (int i = 0; i < 3; ++i) {
+        lb.add_u32(static_cast<std::uint32_t>(sub.size()));
+        lb.add_bytes(sp(sub));
+    }
+    auto ob = b.start_object(8);
+    ob.set_list(0, lb.finish().first, 3);
+    ob.finish_as_root();
+
+    const auto data = b.finish();
+    const auto msg = Message::parse(sp(data));
+    CHECK(msg.has_value());
+    const auto list = msg->root().list(0);
+    CHECK_NUM(3, list.size());
+    for (std::int64_t i = 0; i < 3; ++i) {
+        CHECK_NUM(static_cast<std::int64_t>(sub.size()),
+                  static_cast<std::int64_t>(list.bytes_at(i).size()));
+        CHECK_NUM(4242, list.object_at(i).u32(0));
+    }
+    CHECK(list.bytes_at(3).empty());
+    CHECK(list.object_at(3).is_null());
+    CHECK(list.bytes_at(-1).empty());
+}
+
 // Go: TestTextRoundTrip
 void textroundtrip() {
     Builder b(256);
@@ -513,6 +548,7 @@ int main() {
     nestedobjectwithtext();
     embednamestheroot();
     embedrefuseswhatisnotamessage();
+    lengthprefixedelements();
     invalidmagic();
     buffertoosmall();
     bytesnegativereloffsetrejected();
