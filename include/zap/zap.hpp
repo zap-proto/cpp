@@ -390,6 +390,27 @@ class Builder {
         return off;
     }
 
+    // embed copies a message built elsewhere into this buffer and answers
+    // where its ROOT landed — which is what a nested-struct pointer must
+    // name. Every pointer INSIDE a message is relative to the field that
+    // holds it, so the copy needs no rewriting; only the root has to be found
+    // again, and the copy carries it in its own header. A pointer aimed at
+    // the head of the copy would land on the magic, and a reader would answer
+    // "ZAP" where the first field belongs.
+    //
+    // Answers 0 — the null pointer — for anything that is not a message, so a
+    // caller may embed an absent field without asking first.
+    std::int64_t embed(std::span<const std::uint8_t> msg) {
+        if (msg.size() < kHeaderSize) return 0;
+        const std::int64_t root = static_cast<std::int64_t>(load_u32(msg.data() + 8));
+        if (root < static_cast<std::int64_t>(kHeaderSize) ||
+            root >= static_cast<std::int64_t>(msg.size()))
+            return 0;
+        const std::int64_t at = write_bytes(msg);
+        if (at == 0) return 0;
+        return at + root;
+    }
+
     std::int64_t write_text(std::string_view s) {
         return write_bytes({reinterpret_cast<const std::uint8_t*>(s.data()), s.size()});
     }

@@ -155,6 +155,46 @@ void nestedobject() {
     CHECK_NUM(222, obj.u32(4));
 }
 
+// Go: TestEmbedNamesTheRoot — a message copied into another buffer keeps
+// every internal pointer, because they are relative; what has to be found
+// again is its root. A pointer to the head of the copy names the copy's
+// header, and a reader would answer the magic bytes where the first field
+// belongs.
+void embednamestheroot() {
+    Builder inner(64);
+    auto io = inner.start_object(8);
+    io.set_u32(0, 0xCAFEBABE);
+    io.set_u32(4, 7);
+    io.finish_as_root();
+    const auto sub = inner.finish();
+
+    Builder outer(128);
+    auto oo = outer.start_object(4);
+    oo.set_object(0, outer.embed(sp(sub)));
+    oo.finish_as_root();
+
+    const auto data = outer.finish();
+    const auto msg = Message::parse(sp(data));
+    CHECK(msg.has_value());
+    const auto nested = msg->root().object(0);
+    CHECK(!nested.is_null());
+    CHECK_NUM(0xCAFEBABE, nested.u32(0));
+    CHECK_NUM(7, nested.u32(4));
+}
+
+// Go: TestEmbedRefusesWhatIsNotAMessage — an absent or malformed field embeds
+// as the null pointer, so a caller need not ask first.
+void embedrefuseswhatisnotamessage() {
+    Builder b(64);
+    const std::vector<std::uint8_t> empty;
+    const std::vector<std::uint8_t> shortish{'s', 'h', 'o', 'r', 't'};
+    const std::vector<std::uint8_t> headeronly(kHeaderSize, 0);
+    CHECK_NUM(0, b.embed({}));
+    CHECK_NUM(0, b.embed(sp(empty)));
+    CHECK_NUM(0, b.embed(sp(shortish)));
+    CHECK_NUM(0, b.embed(sp(headeronly)));
+}
+
 // Go: TestTextRoundTrip
 void textroundtrip() {
     Builder b(256);
@@ -471,6 +511,8 @@ int main() {
     textroundtrip();
     multipletextfields();
     nestedobjectwithtext();
+    embednamestheroot();
+    embedrefuseswhatisnotamessage();
     invalidmagic();
     buffertoosmall();
     bytesnegativereloffsetrejected();
